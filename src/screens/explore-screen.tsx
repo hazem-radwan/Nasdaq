@@ -1,5 +1,5 @@
 // src/screens/ExploreScreen.tsx
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   View,
   TextInput,
@@ -7,27 +7,46 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import {useTickersQuery} from '../hooks/use-stocks';
 import StockItem from '../components/stock-item';
+import {useSelector} from 'react-redux';
+import {useAppDispatch} from '../store';
+import {getRecipesSelector} from '../store/features/recipes/selectors';
+import {
+  getRecipes,
+  searchRecipes,
+} from '../store/features/recipes/recipesReducer';
+import {debounce} from '../utils/debounce';
 
 const ExploreScreen = () => {
   const [query, setQuery] = useState('');
-  const {data, fetchNextPage, isFetchingNextPage, hasNextPage} =
-    useTickersQuery({queryParams: {ticker: query}});
-  const FlattenedTickersData = useMemo(
-    () => data?.pages.flatMap(page => page.results),
-    [data],
+  const {isLoading, recipes, searchResults, limit} =
+    useSelector(getRecipesSelector) ?? {};
+
+  const dispatch = useAppDispatch();
+  const [skip, setSkip] = useState(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const updateSearchQuery = useCallback(
+    debounce((q: string) => {
+      q && dispatch(searchRecipes({query: q}));
+    }, 500),
+    [],
   );
 
   useEffect(() => {
-    console.log(FlattenedTickersData?.length);
-  }, [FlattenedTickersData]);
-  const handleSearch = useCallback(
-    (text: string) => {
-      setQuery(text);
-    },
-    [setQuery],
-  );
+    updateSearchQuery(query);
+  }, [query, updateSearchQuery]);
+
+  useEffect(() => {
+    dispatch(getRecipes({limit: 20, skip}));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const refetch = () => {
+    if (limit !== 0) {
+      dispatch(getRecipes({limit: 20, skip: skip + limit}));
+      setSkip(val => val + limit);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -35,25 +54,19 @@ const ExploreScreen = () => {
         style={styles.searchInput}
         placeholder="Search stocks..."
         value={query}
-        onChangeText={handleSearch}
-        onFocus={() => {}}
+        onChangeText={text => setQuery(text)}
         focusable
       />
       <FlatList
-        data={FlattenedTickersData}
+        data={query ? searchResults : recipes}
+        keyExtractor={item => `${item.id}${item.name}`}
         renderItem={({item}) => <StockItem ticker={item} />}
         contentContainerStyle={styles.listContainer}
         columnWrapperStyle={styles.row}
-        onEndReached={() => {
-          if (hasNextPage) {
-            fetchNextPage();
-          }
-        }}
+        onEndReached={refetch}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
-          isFetchingNextPage ? (
-            <ActivityIndicator size="small" color="#0000ff" />
-          ) : null
+          isLoading ? <ActivityIndicator size="small" color="#0000ff" /> : null
         }
         numColumns={2}
       />

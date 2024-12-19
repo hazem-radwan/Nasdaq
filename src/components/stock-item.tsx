@@ -1,12 +1,11 @@
 // src/components/StockItem.tsx
 import React from 'react';
 import {View, Text, StyleSheet} from 'react-native';
-import {Ticker} from '../hooks/use-stocks';
 
-const StockItem = ({ticker}: {ticker: Ticker}) => {
+const StockItem = ({ticker}: {ticker: {name: string}}) => {
   return (
     <View style={styles.itemContainer}>
-      <Text style={styles.ticker}>{ticker.ticker}</Text>
+      <Text style={styles.ticker}>{ticker.name}</Text>
     </View>
   );
 };
@@ -18,7 +17,7 @@ const styles = StyleSheet.create({
     alignContent: 'center',
     height: 120,
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: '#000',
     borderRadius: 5,
     marginHorizontal: 5,
     flex: 1,
@@ -26,6 +25,7 @@ const styles = StyleSheet.create({
   ticker: {
     fontWeight: 'bold',
     fontSize: 16,
+    textAlign: 'center',
   },
   name: {
     fontSize: 14,
